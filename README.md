@@ -1,5 +1,7 @@
 # 🌿 SplitMint — Expense Splitting, Simplified
 
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](https://split-mint-sandy.vercel.app/)
+
 > **SplitMint** is a full-stack expense splitting web application. It lets groups of friends, roommates, or colleagues track shared expenses, compute who owes whom, and settle up — with an AI layer (MintSense) that understands natural language.
 
 ---
