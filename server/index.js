@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
-const Anthropic = require('@anthropic-ai/sdk');
+const Groq = require('groq-sdk')
 
 const app = express();
 app.use(cors());
@@ -13,7 +13,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
 // ── Auth middleware ──────────────────────────────────────────────────────────
 async function auth(req, res, next) {
@@ -304,51 +304,87 @@ app.get('/api/groups/:groupId/balances', auth, async (req, res) => {
 
 // ── AI — MintSense ────────────────────────────────────────────────────────────
 app.post('/api/mintsense', auth, async (req, res) => {
-  const { text, participants } = req.body;
-  const participantList = participants.map(p => p.name).join(', ');
+  const { text, participants } = req.body
+  const participantList = participants.map(p => p.name).join(', ')
 
-  const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 500,
-    messages: [{
-      role: 'user',
-      content: `Parse this expense statement into JSON. Participants available: ${participantList}.
+  try {
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 500,
+      temperature: 0.1,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expense parser. You ONLY respond with valid JSON, no markdown, no backticks, no explanation. Just raw JSON.'
+        },
+        {
+          role: 'user',
+          content: `Parse this expense statement into JSON. Participants available: ${participantList}.
 Statement: "${text}"
 
-Return ONLY valid JSON:
+Return ONLY this JSON structure:
 {
   "description": "string",
   "amount": number,
-  "paid_by_name": "string (must match a participant name exactly)",
-  "split_mode": "equal|custom|percentage",
+  "paid_by_name": "string (must exactly match one of: ${participantList})",
+  "split_mode": "equal",
   "participants": ["name1", "name2"],
   "category": "food|travel|entertainment|utilities|shopping|general",
   "date": "YYYY-MM-DD or null"
 }`
-    }]
-  });
+        }
+      ]
+    })
 
-  try {
-    const json = JSON.parse(message.content[0].text);
-    res.json(json);
-  } catch {
-    res.status(400).json({ error: 'Could not parse AI response', raw: message.content[0].text });
+    const rawText = completion.choices[0].message.content.trim()
+    // Strip markdown code blocks if model adds them anyway
+    const cleaned = rawText.replace(/```json|```/g, '').trim()
+    const json = JSON.parse(cleaned)
+    res.json(json)
+
+  } catch (err) {
+    console.error('MintSense error:', err.message)
+    res.status(503).json({
+      error: 'AI feature unavailable',
+      message: err.message
+    })
   }
-});
+})
 
 // ── AI — Group Summary ────────────────────────────────────────────────────────
 app.post('/api/groups/:groupId/summary', auth, async (req, res) => {
-  const { balances, totalSpent } = req.body;
-  const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 300,
-    messages: [{
-      role: 'user',
-      content: `Generate a friendly 2-3 sentence group expense summary. Total spent: ₹${totalSpent}. Settlements needed: ${JSON.stringify(balances?.settlements?.map(s => `${s.from.name} pays ${s.to.name} ₹${s.amount}`))}.`
-    }]
-  });
-  res.json({ summary: message.content[0].text });
-});
+  const { balances, totalSpent } = req.body
+
+  try {
+    const settlementText = balances?.settlements
+      ?.map(s => `${s.from.name} pays ${s.to.name} ₹${s.amount}`)
+      .join(', ') || 'no settlements needed'
+
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 300,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a friendly expense summarizer. Write clear, concise summaries in 2-3 sentences.'
+        },
+        {
+          role: 'user',
+          content: `Generate a friendly group expense summary. Total spent: ₹${totalSpent}. Settlements: ${settlementText}.`
+        }
+      ]
+    })
+
+    res.json({ summary: completion.choices[0].message.content })
+
+  } catch (err) {
+    console.error('Summary error:', err.message)
+    res.status(503).json({
+      error: 'AI feature unavailable',
+      message: err.message
+    })
+  }
+})
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`SplitMint API running on port ${PORT}`));
