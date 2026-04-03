@@ -1,6 +1,6 @@
 # 🌿 SplitMint — Expense Splitting, Simplified
 
-> **SplitMint** is a full-stack expense splitting web application built for the Karbon Engineering Internship Challenge 2026. It lets groups of friends, roommates, or colleagues track shared expenses, compute who owes whom, and settle up — with an AI layer (MintSense) that understands natural language.
+> **SplitMint** is a full-stack expense splitting web application. It lets groups of friends, roommates, or colleagues track shared expenses, compute who owes whom, and settle up — with an AI layer (MintSense) that understands natural language.
 
 ---
 
@@ -79,7 +79,7 @@
 | Backend | Node.js, Express |
 | Database | Supabase (PostgreSQL) |
 | Auth | Supabase Auth (JWT) |
-| AI | Anthropic Claude API (claude-sonnet-4) |
+| AI | Groq API |
 | Charts | Recharts |
 | Deployment | Vercel (frontend) + Railway (backend) |
 
@@ -128,7 +128,7 @@ splitmint/
 ### Prerequisites
 - Node.js 18+
 - A [Supabase](https://supabase.com) project (free tier works)
-- An [Anthropic API key](https://console.anthropic.com) (for MintSense)
+- An [Groq API key](https://console.groq.com) (for MintSense)
 
 ### 1. Clone the repository
 ```bash
@@ -274,11 +274,11 @@ For equal splits, the remainder from floating-point division is added to the fir
 
 ## 🤖 MintSense AI — How It Works
 
-MintSense sends a structured prompt to Claude (claude-sonnet-4) with:
+MintSense sends a structured prompt to Groq with:
 - The user's natural language statement
 - The list of participant names in the group
 
-Claude returns a JSON object with: `description`, `amount`, `paid_by_name`, `split_mode`, `participants`, `category`, and `date`.
+Groq returns a JSON object with: `description`, `amount`, `paid_by_name`, `split_mode`, `participants`, `category`, and `date`.
 
 The frontend maps participant names back to their database IDs, shows a preview, and lets the user confirm before saving.
 
@@ -326,14 +326,3 @@ The frontend maps participant names back to their database IDs, shows a preview,
 - Service Role Key is **never** exposed to the frontend
 - Environment variables separated between client (Vite) and server (Node)
 
----
-
-## 🧑‍💻 Author
-
-Built with ❤️ for the **Karbon Engineering Internship Challenge 2026**
-
----
-
-## 📄 License
-
-MIT
