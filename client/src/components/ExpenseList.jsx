@@ -228,7 +228,13 @@ export default function ExpenseList({ expenses, participants, filters, onFilter,
               <div className="text-right flex-shrink-0">
                 <p className="font-display text-xl text-carbon-900">₹{parseFloat(exp.amount).toFixed(2)}</p>
                 <p className="text-xs text-carbon-400">
-                  ₹{splitParticipants > 0 ? (parseFloat(exp.amount) / splitParticipants).toFixed(2) : '—'} each
+                  {exp.split_mode === 'equal' && splitParticipants > 0
+                  ? `₹${(parseFloat(exp.amount) / splitParticipants).toFixed(2)} each`
+                  : exp.split_mode === 'percentage'
+                  ? 'Custom % split'
+                  : exp.split_mode === 'custom'
+                  ? 'Custom amounts'
+                  : ''}
                 </p>
               </div>
 
