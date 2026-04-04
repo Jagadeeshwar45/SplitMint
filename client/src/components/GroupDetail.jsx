@@ -33,7 +33,12 @@ export default function GroupDetail({ group, onRefresh }) {
     setBalances(bal)
   }
 
-  useEffect(() => { if (group?.id) load() }, [group?.id, filters])
+  useEffect(() => {
+    if (group?.id) {
+      setAiSummary('')  // ADD THIS LINE
+      load()
+    }
+  }, [group?.id, filters])
 
   const totalSpent = expenses.reduce((s, e) => s + parseFloat(e.amount), 0)
 
@@ -247,6 +252,7 @@ export default function GroupDetail({ group, onRefresh }) {
       )}
       {tab === 'balances' && (
         <BalanceView
+          key={group.id} 
           balances={balances}
           summary={aiSummary}
           summaryLoading={summaryLoading}
