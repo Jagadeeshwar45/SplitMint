@@ -388,3 +388,45 @@ app.post('/api/groups/:groupId/summary', auth, async (req, res) => {
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`SplitMint API running on port ${PORT}`));
+
+
+// ── AI — Smart Settlement Suggestions ────────────────────────────────────────
+app.post('/api/groups/:groupId/settlement-advice', auth, async (req, res) => {
+  const { settlements, participants } = req.body
+
+  if (!settlements || settlements.length === 0) {
+    return res.json({ advice: "🎉 Everyone is settled up! No payments needed." })
+  }
+
+  try {
+    const settlementList = settlements
+      .map((s, i) => `${i + 1}. ${s.from.name} pays ${s.to.name} ₹${s.amount}`)
+      .join('\n')
+
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 400,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a helpful expense settlement advisor. Give friendly, clear, step-by-step advice on how a group should settle their debts. Be encouraging and practical.'
+        },
+        {
+          role: 'user',
+          content: `Here are the minimum settlements needed for our group:
+
+${settlementList}
+
+Please explain these settlement steps in a friendly, easy-to-understand way. Mention the most efficient order to settle, and any tips to make it easy (like using UPI, splitting a payment, etc). Keep it under 5 sentences.`
+        }
+      ]
+    })
+
+    res.json({ advice: completion.choices[0].message.content })
+  } catch (err) {
+    console.error('Settlement advice error:', err.message)
+    res.status(503).json({
+      advice: 'AI settlement advice unavailable. Please check your Groq API key.'
+    })
+  }
+})

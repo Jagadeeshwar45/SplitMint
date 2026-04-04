@@ -73,5 +73,9 @@ export const api = {
   groupSummary: async (groupId, body) => {
     const h = await getHeaders()
     return (await axios.post(`${BASE}/api/groups/${groupId}/summary`, body, { headers: h })).data
+  },
+  settlementAdvice: async (groupId, body) => {
+    const h = await getHeaders()
+    return (await axios.post(`${BASE}/api/groups/${groupId}/settlement-advice`, body, { headers: h })).data
   }
 }
